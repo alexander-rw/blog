@@ -3,10 +3,10 @@ WORKDIR /app
 ENV PATH /app/node_modules/.bin:$PATH
 COPY package.json ./
 COPY yarn.lock ./
-RUN npm ci --silent
-RUN npm install react-scripts -g --silent
+RUN yarn install
+RUN yarn global add react-scripts
 COPY . ./
-RUN npm run build
+RUN yarn build
 
 FROM nginx:stable-alpine
 COPY --from=builder /app/build /usr/share/nginx/html
