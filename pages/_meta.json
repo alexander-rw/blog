@@ -1,9 +1,10 @@
 {
-  "index": "About me",
+  "index": "About Me",
   "contact": {
     "title": "Contact ✉️",
     "type": "page",
     "href": "https://github.com/alexander-rw",
     "newWindow": true
-  }
+  },
+  "recipes": "Recipes"
 }
