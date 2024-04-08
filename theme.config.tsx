@@ -4,15 +4,17 @@ import { DocsThemeConfig } from 'nextra-theme-docs'
 const config: DocsThemeConfig = {
   logo: <span>Alexander RW</span>,
   project: {
-    link: 'https://github.com/shuding/nextra-docs-template',
+    link: 'https://github.com/alexander-rw',
   },
-  // chat: {
-  //   link: 'https://discord.com',
-  // },
-  // docsRepositoryBase: 'https://github.com/shuding/nextra-docs-template',
   footer: {
     text: 'Nextra Docs Template',
   },
-}
+  editLink: {
+    text: ''
+  },
+  feedback: {
+    content: <span></span>
+  },
+};
 
-export default config
+export default config;
