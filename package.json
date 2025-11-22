@@ -1,38 +1,23 @@
 {
-  "name": "nextra-docs-template",
-  "version": "0.0.1",
-  "description": "Nextra docs template",
+  "name": "alexander-rw-blog",
+  "version": "1.0.0",
+  "description": "Blog for alexander-rw.com",
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
+    "start": "next start",
     "build": "next build",
-    "start": "next start"
+    "postbuild": "pagefind --site .next/server/app --output-path public/_pagefind"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/shuding/nextra-docs-template.git"
-  },
-  "author": "Shu Ding <g@shud.in>",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/shuding/nextra-docs-template/issues"
-  },
-  "homepage": "https://github.com/shuding/nextra-docs-template#readme",
   "dependencies": {
     "next": "^16.0.3",
-    "nextra": "4.6.0",
-    "nextra-theme-docs": "4.6.0",
+    "nextra": "^4.6.0",
+    "nextra-theme-blog": "^4.6.0",
+    "nextra-theme-docs": "^4.6.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
-    "@types/node": "^24.10.1",
-    "@types/react": "^19.2.6",
-    "@types/react-dom": "^19.2.3",
-    "autoprefixer": "^10.4.22",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.17",
-    "eslint": "^9.39.1",
-    "eslint-config-next": "^16.0.3"
+    "pagefind": "^1.4.0"
   }
 }
