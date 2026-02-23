@@ -1,5 +1,5 @@
 import { PostCard } from 'nextra-theme-blog'
-import { getPosts, getTags } from '../../posts/get-posts'
+import { getPosts, getTags } from '../../posts/get-blog-posts'
 
 export async function generateMetadata(props) {
   const params = await props.params

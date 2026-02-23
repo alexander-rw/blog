@@ -1,22 +1,22 @@
-import { getPosts } from '../posts/get-posts.js'
+import { getBlogPosts } from '../posts/get-blog-posts.js'
 
 const CONFIG = {
-  title: 'My Blog',
-  siteUrl: 'https://your-domain.com',
+  title: 'Alexander RW\'s Blog',
+  siteUrl: 'https://alexander-rw.com',
   description: 'Latest blog posts',
-  lang: 'en-us'
-}
+  lang: 'en-GB'
+};
 
 export async function GET() {
-  const allPosts = await getPosts()
+  const allPosts = await getBlogPosts()
   const posts = allPosts
     .map(
-      post => `    <item>
+      post => `<item>
         <title>${post.title}</title>
-        <description>${post.frontMatter.description}</description>
-        <link>${CONFIG.siteUrl}${post.route}</link>
-        <pubDate>${new Date(post.frontMatter.date).toUTCString()}</pubDate>
-    </item>`
+          <description>${post.frontMatter.description}</description>
+          <link>${CONFIG.siteUrl}${post.route}</link>
+          <pubDate>${new Date(post.frontMatter.date).toUTCString()}</pubDate>
+        </item>`
     )
     .join('\n')
   const xml = `<?xml version="1.0" encoding="UTF-8" ?>

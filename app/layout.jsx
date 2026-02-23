@@ -10,16 +10,22 @@ export default async function RootLayout({ children }) {
       <body>
         <Layout>
           <Navbar pageMap={await getPageMap()}>
-            <Search />
+            <Search placeholder="Search..." />
             <ThemeSwitch />
           </Navbar>
 
           {children}
 
           <Footer>
-            <a href="https://github.com/alexander-rw" target="_blank" style={{ float: 'right' }}>
-              My GitHub
-            </a>
+            <div style={{ float: 'right', display: 'inline-block' }}>
+              <a href="https://www.linkedin.com/in/alexanderreyeswainwright" target="_blank" style={{ display: 'inline-block', paddingRight: '0.2rem' }}>
+                LinkedIn
+              </a>
+              <p style={{ display: 'inline-block' }}>;</p>
+              <a href="https://github.com/alexander-rw" target="_blank" style={{ display: 'inline-block', paddingLeft: '0.2rem', paddingRight: '0.2rem'  }}>
+                GitHub
+              </a>
+            </div>
           </Footer>
         </Layout>
       </body>
