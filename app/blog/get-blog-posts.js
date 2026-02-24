@@ -1,10 +1,10 @@
 import { normalizePages } from 'nextra/normalize-pages'
 import { getPageMap } from 'nextra/page-map'
 
-export async function getPosts() {
+export async function getBlogPosts() {
   const { directories } = normalizePages({
-    list: await getPageMap('/posts'),
-    route: '/posts'
+    list: await getPageMap('/blog'),
+    route: '/blog'
   })
   return directories
     .filter(post => post.name !== 'index')
@@ -12,7 +12,7 @@ export async function getPosts() {
 }
 
 export async function getTags() {
-  const posts = await getPosts()
+  const posts = await getBlogPosts()
   const tags = posts.flatMap(post => post.frontMatter.tags)
   return tags
 }
