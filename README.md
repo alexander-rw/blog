@@ -1,12 +1,13 @@
-# Nextra Docs Template 
+# Nextra Docs Template
 
-This is my blog site written with [Nextra](https://nextra.site).
+This is my blog site written from scratch in rust, compiled to a single binary.
+All markdown files are installed within the binary
 
 ## Local Development
 
-You'll need `bun` installed.
+You'll need `cargo` installed.
 
-Run `bun run dev` to run the project. If dependencies aren't installed, run `bun install` at the base of the repository first.
+`cargo run` to run the project. `cargo build` to just build it.
 
 ## License
 
