@@ -1,6 +1,8 @@
 mod error;
 mod handler;
 mod mdx_options;
+mod meta;
+mod template;
 
 use axum::{Router, routing::get};
 use tokio::net::TcpListener;
@@ -36,15 +38,17 @@ pub fn parse_mdx(content: &str) -> Result<markdown::mdast::Node, String> {
     Ok(ast)
 }
 
-/// Start the axum HTTP server on `0.0.0.0:3000`.
+/// Start the axum HTTP server on `0.0.0.0:3084`.
 ///
 /// Routes:
-/// - `GET /`        → serves `pages/index.mdx` as an HTML fragment
-/// - `GET /{*path}` → serves `pages/{path}.mdx` as an HTML fragment
+/// - `GET /`        → serves `pages/index.mdx` as a full HTML page
+/// - `GET /blog`    → serves a listing of all published blog posts
+/// - `GET /{*path}` → tries `pages/{path}/page.mdx`, falls back to `pages/{path}.mdx`
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/", get(handler::serve_index))
+        .route("/blog", get(handler::serve_blog_index))
         .route("/{*path}", get(handler::serve_page))
         .layer(TraceLayer::new_for_http());
 
