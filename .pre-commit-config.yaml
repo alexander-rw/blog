@@ -8,8 +8,6 @@ repos:
         pass_filenames: false
       - id: clippy-rust
         name: run rust clippy
-        entry: |
-          cargo clippy --all-features --fix
-          cargo clippy --all-features -- -D warnings
+        entry: cargo clippy --all-targets --all-features -- -Dclippy::all
         language: system
         pass_filenames: false
