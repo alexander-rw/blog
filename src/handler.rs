@@ -1,5 +1,4 @@
 use axum::{extract::Path, response::Html};
-use tokio::task;
 
 use crate::{error::AppError, mdx_options, parse_mdx};
 
@@ -38,9 +37,6 @@ pub async fn serve_page(Path(path): Path<String>) -> Result<Html<String>, AppErr
 
 /// Read an MDX file and return its rendered HTML.
 ///
-/// The markdown parse is CPU-bound, so it is offloaded to a blocking thread
-/// via [`tokio::task::spawn_blocking`] to avoid stalling the async executor.
-///
 /// # Arguments
 ///
 /// * `file_path` - Path to the `.mdx` file relative to the working directory
@@ -55,22 +51,14 @@ async fn serve_mdx_file(file_path: &str) -> Result<Html<String>, AppError> {
         .await
         .map_err(|_| AppError::NotFound(file_path.to_owned()))?;
 
-    // `parse_mdx` and `markdown::to_html_with_options` are CPU-bound.
-    // Offloading to a blocking thread prevents the async reactor from stalling.
-    //
-    // `markdown::Options` holds `Box<dyn Fn(...)>` fields that are not `Send`,
-    // so we construct the options *inside* the closure (on the blocking thread)
-    // rather than moving them across the thread boundary.
-    let html = task::spawn_blocking(move || -> Result<String, AppError> {
-        let opts = mdx_options::default_mdx_compile_options();
-        parse_mdx(&content).map_err(AppError::ParseError)?;
-        // Convert the raw MDX content to HTML using the same options.
-        markdown::to_html_with_options(&content, &opts)
-            .map_err(|e| AppError::ParseError(e.to_string()))
-    })
-    .await
-    // `JoinError` means the blocking task panicked; treat as parse error.
-    .map_err(|e| AppError::ParseError(e.to_string()))??;
+    // `markdown::Options` is not `Send`/`Sync` (holds `Box<dyn Fn(...)>`), so it
+    // cannot be placed in a static or moved across threads via spawn_blocking.
+    // For blog-sized MDX files, parsing is fast enough to run inline without
+    // meaningfully blocking the async reactor.
+    let opts = mdx_options::default_mdx_compile_options();
+    parse_mdx(&content).map_err(AppError::ParseError)?;
+    let html = markdown::to_html_with_options(&content, &opts)
+        .map_err(|e| AppError::ParseError(e.to_string()))?;
 
     Ok(Html(html))
 }
