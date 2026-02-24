@@ -1,3 +1,7 @@
 .next
 node_modules
 _pagefind/
+
+# Added by cargo
+
+/target
