@@ -1,4 +1,4 @@
-use crate::meta::{PageMeta, PostListing};
+use crate::{page::PageMeta, post::PostListing};
 
 const LINKEDIN_URL: &str = "https://www.linkedin.com/in/alexanderreyeswainwright";
 const GITHUB_URL: &str = "https://github.com/alexander-rw";

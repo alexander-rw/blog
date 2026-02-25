@@ -1,6 +1,6 @@
 use axum::{extract::Path, response::Html};
 
-use crate::{error::AppError, mdx_options, meta, parse_mdx, template};
+use crate::{error::AppError, mdx_options, page, parse_mdx, post, template};
 
 /// Serve the index page at `/`, mapping to `pages/index.mdx`.
 ///
@@ -30,7 +30,7 @@ pub async fn serve_index() -> Result<Html<String>, AppError> {
 /// Returns `AppError::NotFound` if the `pages/blog` directory cannot be read.
 /// Returns `AppError::ParseError` if any post's frontmatter is malformed.
 pub async fn serve_blog_index() -> Result<Html<String>, AppError> {
-    let posts = meta::list_posts().await?;
+    let posts = post::list_posts().await?;
     Ok(Html(template::render_post_list(&posts)))
 }
 
@@ -88,7 +88,7 @@ async fn serve_mdx_file(file_path: &str) -> Result<Html<String>, AppError> {
     // meaningfully blocking the async reactor.
     let opts = mdx_options::default_mdx_compile_options();
     let ast = parse_mdx(&content).map_err(AppError::ParseError)?;
-    let page_meta = meta::extract_meta(&ast, &content)?;
+    let page_meta = page::extract_meta(&ast, &content)?;
     let html = markdown::to_html_with_options(&content, &opts)
         .map_err(|e| AppError::ParseError(e.to_string()))?;
 

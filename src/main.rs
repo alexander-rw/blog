@@ -1,7 +1,8 @@
 mod error;
 mod handler;
 mod mdx_options;
-mod meta;
+mod page;
+mod post;
 mod template;
 
 use axum::{Router, routing::get};
@@ -65,13 +66,11 @@ mod tests {
 
     #[test]
     fn errors_on_missing_frontmatter() {
-        let broken = std::fs::read_to_string("pages/index2.mdx").unwrap();
-        assert!(parse_mdx(&broken).is_err());
+        assert!(parse_mdx("# No frontmatter here\n").is_err());
     }
 
     #[test]
     fn parses_valid_frontmatter() {
-        let valid = std::fs::read_to_string("pages/index.mdx").unwrap();
-        assert!(parse_mdx(&valid).is_ok());
+        assert!(parse_mdx("---\ntitle: About Me\n---\n\n# Introduction\n").is_ok());
     }
 }
