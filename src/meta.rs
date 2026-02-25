@@ -31,7 +31,7 @@ struct Frontmatter {
     description: Option<String>,
     /// When `true`, the post is excluded from public listings.
     #[serde(default)]
-    draft: bool,
+    draft: Option<bool>,
 }
 
 /// Return the raw YAML string from the first [`Node::Yaml`] child of `ast`.
@@ -139,7 +139,7 @@ pub async fn list_posts() -> Result<Vec<PostListing>, AppError> {
         let fm: Frontmatter =
             serde_yaml::from_str(yaml).map_err(|e| AppError::ParseError(format!("{slug}: {e}")))?;
 
-        if fm.draft {
+        if fm.draft == Some(true) {
             continue;
         }
 
