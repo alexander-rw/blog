@@ -3,7 +3,6 @@
   var html = document.documentElement;
   function applyTheme(theme) {
     html.setAttribute('data-theme', theme);
-    btn.textContent = theme === 'dark' ? 'Light' : 'Dark';
   }
   var stored = localStorage.getItem('theme');
   if (stored) {

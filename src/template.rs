@@ -25,7 +25,7 @@ fn html_shell(page_title: &str, body: Markup) -> Markup {
                 // emits it as `crossorigin=""` which browsers treat identically.
                 link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="";
                 link
-                    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap"
+                    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
                     rel="stylesheet";
                 link
                     rel="stylesheet"
@@ -41,13 +41,20 @@ fn html_shell(page_title: &str, body: Markup) -> Markup {
                         a href="/blog/blog-of-blogs" { "Other Writers" }
                         a href="/blog" { "Posts" }
                     }
-                    button #theme-toggle aria-label="Toggle theme" { "Dark" }
+                    button #theme-toggle aria-label="Toggle theme" {
+                        span .icon-light { (PreEscaped(constants::THEME_ICON_SVG)) }
+                        span .icon-dark  { (PreEscaped(constants::MOON_ICON_SVG)) }
+                    }
                 }
                 main { (body) }
                 footer {
-                    a href=(constants::LINKEDIN_URL) target="_blank" rel="noopener noreferrer" { "LinkedIn" }
-                    (PreEscaped("&nbsp;&bull;&nbsp;"))
-                    a href=(constants::GITHUB_URL) target="_blank" rel="noopener noreferrer" { "GitHub" }
+                    // Icon SVGs use `currentColor`, so they inherit the link's --muted / --accent colour.
+                    a href=(constants::LINKEDIN_URL) target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" {
+                        (PreEscaped(constants::LINKEDIN_ICON_SVG))
+                    }
+                    a href=(constants::GITHUB_URL) target="_blank" rel="noopener noreferrer" aria-label="GitHub" {
+                        (PreEscaped(constants::GITHUB_ICON_SVG))
+                    }
                 }
                 script { (PreEscaped(constants::THEME_SCRIPT)) }
             }
@@ -86,16 +93,20 @@ pub fn render_page(meta: &PageMeta, html_content: &str) -> Markup {
 /// * `posts` - Slice of post summaries, typically pre-sorted by date descending
 pub fn render_post_list(posts: &[PostListing]) -> Markup {
     let body = html! {
-        h1 { "Posts" }
+        h1 class="page-title" { "Posts" }
         ul class="post-list" {
             @for post in posts {
                 li {
-                    a href={ "/blog/" (post.slug) } { (post.title) }
-                    @if let Some(date) = &post.date {
-                        p class="post-meta" { (date) }
-                    }
-                    @if let Some(desc) = &post.description {
-                        p class="post-desc" { (desc) }
+                    a class="post-card" href={ "/blog/" (post.slug) } {
+                        div class="post-card-header" {
+                            span class="post-title" { (post.title) }
+                            @if let Some(date) = &post.date {
+                                span class="post-meta" { (date) }
+                            }
+                        }
+                        @if let Some(desc) = &post.description {
+                            p class="post-desc" { (desc) }
+                        }
                     }
                 }
             }
