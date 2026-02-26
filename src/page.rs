@@ -68,7 +68,7 @@ pub fn extract_meta(ast: &Node, content: &str) -> Result<PageMeta, AppError> {
     let body = strip_frontmatter(content);
     let word_count = body.split_whitespace().count();
     // Integer division: 400 words → 2 min; fewer than 200 words → 1 min (minimum).
-    let read_time_mins = (word_count / 200).max(1);
+    let read_time_mins: usize = (word_count / 200).max(1);
 
     Ok(PageMeta {
         title: fm.title,
