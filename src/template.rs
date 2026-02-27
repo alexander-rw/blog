@@ -10,9 +10,12 @@ use crate::{constants, page::PageMeta, post::PostListing};
 ///
 /// # Arguments
 ///
-/// * `page_title` - Text for the browser-tab `<title>` element (auto-escaped by Maud)
-/// * `body`       - Pre-built Maud `Markup` fragment placed inside `<main>`
-fn html_shell(page_title: &str, body: Markup) -> Markup {
+/// * `page_title`  - Text for the browser-tab `<title>` element (auto-escaped by Maud)
+/// * `body`        - Pre-built Maud `Markup` fragment placed inside `<main>`
+/// * `search_json` - Pre-serialised JSON array for `window.__SEARCH__`, injected inline.
+///   `</` sequences must already be escaped to `<\/` by the caller to prevent premature
+///   `</script>` tag closure.
+fn html_shell(page_title: &str, body: Markup, search_json: &str) -> Markup {
     html! {
         (DOCTYPE)
         html lang="en" data-theme="light" {
@@ -30,9 +33,13 @@ fn html_shell(page_title: &str, body: Markup) -> Markup {
                 link
                     rel="stylesheet"
                     href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.min.css";
-                // `PreEscaped` passes the CSS/JS constants through verbatim —
-                // they contain raw `{`, `}`, `<`, `>` that must not be entity-encoded.
+                // `PreEscaped` passes the CSS constant through verbatim —
+                // it contains raw `{`, `}`, `<`, `>` that must not be entity-encoded.
                 style { (PreEscaped(constants::STYLES)) }
+                // Inline the search index so the client needs zero extra HTTP requests.
+                // `search_json` has `</` escaped as `<\/` (valid JSON) to prevent a
+                // stray `</script>` in any post content from closing this tag early.
+                script { (PreEscaped(format!("window.__SEARCH__={search_json}"))) }
             }
             body {
                 header {
@@ -41,12 +48,34 @@ fn html_shell(page_title: &str, body: Markup) -> Markup {
                         a href="/blog/blog-of-blogs" { "Other Writers" }
                         a href="/blog" { "Posts" }
                     }
-                    button #theme-toggle aria-label="Toggle theme" {
-                        span .icon-light { (PreEscaped(constants::THEME_ICON_SVG)) }
-                        span .icon-dark  { (PreEscaped(constants::MOON_ICON_SVG)) }
+                    div .header-controls {
+                        button #search-btn .search-btn aria-label="Search posts" {
+                            (PreEscaped(constants::SEARCH_ICON_SVG))
+                            kbd { "Ctrl K" }
+                        }
+                        button #theme-toggle aria-label="Toggle theme" {
+                            span .icon-light { (PreEscaped(constants::THEME_ICON_SVG)) }
+                            span .icon-dark  { (PreEscaped(constants::MOON_ICON_SVG)) }
+                        }
                     }
                 }
                 main { (body) }
+                // Search dialog — native <dialog> element, opened via showModal().
+                // Closing: Escape key (native), the "esc" button, or clicking the backdrop.
+                dialog #search-dialog aria-modal="true" aria-label="Search posts" {
+                    div .search-header {
+                        span .search-label { "Search posts" }
+                        button #search-close .search-close type="button" aria-label="Close" {
+                            "esc"
+                        }
+                    }
+                    input
+                        #search-input
+                        type="search"
+                        placeholder="Search posts..."
+                        autocomplete="off";
+                    ul #search-results .search-results {}
+                }
                 footer {
                     // Icon SVGs use `currentColor`, so they inherit the link's --muted / --accent colour.
                     a href=(constants::LINKEDIN_URL) target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" {
@@ -57,6 +86,7 @@ fn html_shell(page_title: &str, body: Markup) -> Markup {
                     }
                 }
                 script { (PreEscaped(constants::THEME_SCRIPT)) }
+                script { (PreEscaped(constants::SEARCH_SCRIPT)) }
             }
         }
     }
@@ -72,7 +102,8 @@ fn html_shell(page_title: &str, body: Markup) -> Markup {
 ///
 /// * `meta`         - Frontmatter-derived title and reading-time estimate
 /// * `html_content` - MDX-rendered HTML fragment (not escaped — already valid HTML)
-pub fn render_page(meta: &PageMeta, html_content: &str) -> Markup {
+/// * `search_json`  - Pre-serialised JSON search index (with `</` escaped as `<\/`)
+pub fn render_page(meta: &PageMeta, html_content: &str, search_json: &str) -> Markup {
     let body = html! {
         h1 class="page-title" { (meta.title) }
         p class="read-time" { (meta.read_time_mins) " min read" }
@@ -80,7 +111,7 @@ pub fn render_page(meta: &PageMeta, html_content: &str) -> Markup {
         // so bypass Maud's auto-escaping with `PreEscaped`.
         div class="content" { (PreEscaped(html_content)) }
     };
-    html_shell(&meta.title, body)
+    html_shell(&meta.title, body, search_json)
 }
 
 /// Render a `<ul>` listing of blog posts inside the shared HTML shell.
@@ -90,8 +121,9 @@ pub fn render_page(meta: &PageMeta, html_content: &str) -> Markup {
 ///
 /// # Arguments
 ///
-/// * `posts` - Slice of post summaries, typically pre-sorted by date descending
-pub fn render_post_list(posts: &[PostListing]) -> Markup {
+/// * `posts`       - Slice of post summaries, typically pre-sorted by date descending
+/// * `search_json` - Pre-serialised JSON search index (with `</` escaped as `<\/`)
+pub fn render_post_list(posts: &[PostListing], search_json: &str) -> Markup {
     let body = html! {
         h1 class="page-title" { "Posts" }
         ul class="post-list" {
@@ -112,5 +144,5 @@ pub fn render_post_list(posts: &[PostListing]) -> Markup {
             }
         }
     };
-    html_shell("Posts", body)
+    html_shell("Posts", body, search_json)
 }

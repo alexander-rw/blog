@@ -20,8 +20,26 @@ pub struct PageStore {
     blog_listing: String,
 }
 
+/// Intermediate data produced during the first parse pass, before rendering.
+///
+/// Owned so it can outlive the parsing loop and be used in the render pass.
+struct PageData {
+    key: String,
+    meta: page::PageMeta,
+    html_content: String,
+    listing: Option<post::PostListing>,
+}
+
 impl PageStore {
     /// Parse and render every embedded MDX source, returning a fully built store.
+    ///
+    /// Uses a two-pass strategy:
+    /// 1. Parse all MDX files, extract metadata and post listings (with body text).
+    /// 2. Serialise the search index, then render every page with the index inline.
+    ///
+    /// This ordering is required because each rendered page embeds the *complete*
+    /// search index covering all posts — so the index must be finalised before any
+    /// page is rendered.
     ///
     /// Called once at server startup. Any validation or render failure returns
     /// `Err`, preventing the server from starting with broken content.
@@ -36,8 +54,9 @@ impl PageStore {
         // because `build()` is a plain synchronous function.
         let opts = mdx_options::default_mdx_compile_options();
 
-        let mut pages = HashMap::with_capacity(EMBEDDED_MDX.len());
-        let mut post_listings: Vec<post::PostListing> = Vec::new();
+        // --- Pass 1: parse every MDX source, collecting metadata and listings. ---
+        // Rendering is deferred until the full search index is available.
+        let mut parsed: Vec<PageData> = Vec::with_capacity(EMBEDDED_MDX.len());
 
         for &(key, source) in EMBEDDED_MDX {
             let ast = parse_mdx(source)
@@ -48,23 +67,32 @@ impl PageStore {
                 .map_err(|e| anyhow::anyhow!("{e}"))
                 .with_context(|| format!("extracting metadata for \"{key}\""))?;
 
-            let html = markdown::to_html_with_options(source, &opts)
+            let html_content = markdown::to_html_with_options(source, &opts)
                 .map_err(|e| anyhow::anyhow!("{e}"))
                 .with_context(|| format!("rendering HTML for \"{key}\""))?;
 
             // Any page filed under blog/ is a candidate for the post listing.
             // `extract_listing` returns None for drafts so they are silently skipped.
-            if let Some(slug) = key.strip_prefix("blog/")
-                && let Some(listing) = post::extract_listing(slug, &ast)
+            let listing = if let Some(slug) = key.strip_prefix("blog/") {
+                post::extract_listing(slug, &ast)
                     .map_err(|e| anyhow::anyhow!("{e}"))
                     .with_context(|| format!("extracting post listing for \"{key}\""))?
-            {
-                post_listings.push(listing);
-            }
+            } else {
+                None
+            };
 
-            // Store the inner String from the returned Markup value.
-            pages.insert(key.to_owned(), template::render_page(&meta, &html).0);
+            parsed.push(PageData {
+                key: key.to_owned(),
+                meta,
+                html_content,
+                listing,
+            });
         }
+
+        // --- Build the search index from all collected post listings. ---
+        // Clone listings out of `parsed` so we can sort them independently.
+        let mut post_listings: Vec<post::PostListing> =
+            parsed.iter().filter_map(|p| p.listing.clone()).collect();
 
         // Descending date sort; posts without a date sink to the bottom.
         post_listings.sort_by(|a, b| match (&b.date, &a.date) {
@@ -74,7 +102,22 @@ impl PageStore {
             (None, None) => std::cmp::Ordering::Equal,
         });
 
-        let blog_listing = template::render_post_list(&post_listings).0;
+        // Serialise to JSON; escape `</` as `<\/` (valid JSON, prevents accidental
+        // `</script>` tag closure when the JSON is inlined in an HTML <script> block).
+        let search_json = serde_json::to_string(&post_listings)
+            .context("serialising search index")?
+            .replace("</", "<\\/");
+
+        // --- Pass 2: render every page with the complete search index inline. ---
+        let mut pages = HashMap::with_capacity(parsed.len());
+        for p in &parsed {
+            pages.insert(
+                p.key.clone(),
+                template::render_page(&p.meta, &p.html_content, &search_json).0,
+            );
+        }
+
+        let blog_listing = template::render_post_list(&post_listings, &search_json).0;
 
         Ok(PageStore {
             pages,

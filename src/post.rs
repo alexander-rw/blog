@@ -1,16 +1,18 @@
 use markdown::mdast::Node;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{error::AppError, page::yaml_from_ast};
 
-/// Summary data for a single blog post, used in the post listing.
-#[derive(Debug, Clone)]
+/// Summary data for a single blog post, used in the post listing and search index.
+#[derive(Debug, Clone, Serialize)]
 pub struct PostListing {
     pub title: String,
     /// URL-safe directory name under `pages/blog/`.
     pub slug: String,
     pub date: Option<String>,
     pub description: Option<String>,
+    /// Plain-text body content stripped of all markup, used for client-side full-text search.
+    pub body: String,
 }
 
 /// All frontmatter fields relevant to post listings.
@@ -52,5 +54,56 @@ pub(crate) fn extract_listing(slug: &str, ast: &Node) -> Result<Option<PostListi
         slug: slug.to_owned(),
         date: fm.date,
         description: fm.description,
+        body: body_text_from_ast(ast),
     }))
+}
+
+/// Walk an MDX AST and collect all visible text content into a single string.
+///
+/// Text nodes from different blocks are separated by spaces. YAML frontmatter
+/// and raw HTML nodes are skipped because they are not user-readable body content.
+///
+/// # Arguments
+///
+/// * `ast` - The root [`Node`] of a parsed MDX document
+///
+/// # Returns
+///
+/// A `String` containing all text and inline/block code content.
+pub(crate) fn body_text_from_ast(ast: &Node) -> String {
+    let mut buf = String::new();
+    collect_text(ast, &mut buf);
+    buf
+}
+
+/// Recursively accumulate text content from `node` into `buf`.
+fn collect_text(node: &Node, buf: &mut String) {
+    match node {
+        // Leaf text nodes — the primary source of searchable content.
+        Node::Text(t) => push_text(buf, &t.value),
+        // Inline and fenced code is also valuable for search (e.g. function names, commands).
+        Node::InlineCode(ic) => push_text(buf, &ic.value),
+        Node::Code(c) => push_text(buf, &c.value),
+        // Skip: YAML frontmatter (metadata, not body) and raw HTML nodes (markup noise).
+        Node::Yaml(_) | Node::Html(_) => {}
+        // All container nodes: recurse into children.
+        _ => {
+            if let Some(children) = node.children() {
+                for child in children {
+                    collect_text(child, buf);
+                }
+            }
+        }
+    }
+}
+
+/// Append `val` to `buf`, inserting a space separator when `buf` is non-empty.
+fn push_text(buf: &mut String, val: &str) {
+    if val.is_empty() {
+        return;
+    }
+    if !buf.is_empty() {
+        buf.push(' ');
+    }
+    buf.push_str(val);
 }
