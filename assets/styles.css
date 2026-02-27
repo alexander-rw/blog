@@ -1,10 +1,11 @@
 :root {
   --font-family: 'Plus Jakarta Sans', sans-serif;
-  --bg: #F7F4EC;
+  --bg: #fefce8;
   --text: #1C1B33;
   --accent: #6D28D9;
   --muted: #6B7280;
   --max-width: 720px;
+  --separator: #F7F4EC;
 }
 [data-theme='dark'] {
   --bg: #0F0E1A;
@@ -41,7 +42,7 @@ body > header {
   justify-content: space-between;
   padding-top: 1.5rem;
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--text) 15%, transparent);
+  border-bottom: 1px solid var(--separator);
 }
 nav a {
   color: var(--text);
@@ -113,7 +114,7 @@ main { padding-top: 2.5rem; padding-bottom: 2.5rem; }
 .post-meta { font-size: 0.8rem; color: var(--muted); flex-shrink: 0; }
 .post-desc { font-size: 0.85rem; color: var(--muted); margin: 0.2rem 0 0; }
 body > footer {
-  border-top: 1px solid color-mix(in srgb, var(--text) 15%, transparent);
+  border-top: 1px solid var(--separator);
   padding-top: 1rem;
   padding-bottom: 1rem;
   display: flex;
