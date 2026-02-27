@@ -95,6 +95,7 @@ main { padding-top: 2.5rem; padding-bottom: 2.5rem; }
 .content a { color: var(--accent); font-weight: 500; }
 .content p { line-height: 1.75; }
 .post-list { list-style: none; padding: 0; margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.post-list li { list-style: none; }
 .post-card {
   display: block;
   padding: 0.75rem 1rem;
