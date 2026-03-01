@@ -5,5 +5,7 @@ _pagefind/
 .claude/
 
 # Added by cargo
-
 /target
+
+# worker-build output
+/build

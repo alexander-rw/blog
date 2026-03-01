@@ -1,9 +1,6 @@
-use std::sync::Arc;
+use worker::{Response, Result};
 
-use axum::extract::{Path, State};
-use maud::{Markup, PreEscaped};
-
-use crate::{error::AppError, store::PageStore};
+use crate::store::PageStore;
 
 /// Serve the index page at `/`.
 ///
@@ -13,12 +10,12 @@ use crate::{error::AppError, store::PageStore};
 ///
 /// # Errors
 ///
-/// Returns [`AppError::NotFound`] if the index page was not compiled into the store.
-pub async fn serve_index(State(store): State<Arc<PageStore>>) -> Result<Markup, AppError> {
+/// Returns a worker error if the index page was not compiled into the store.
+pub fn serve_index(store: &PageStore) -> Result<Response> {
     let html = store
         .page("index")
-        .ok_or_else(|| AppError::NotFound("index".to_owned()))?;
-    Ok(PreEscaped(html.to_owned()))
+        .ok_or_else(|| worker::Error::RustError("index page not found".to_owned()))?;
+    Response::from_html(html)
 }
 
 /// Serve the blog post listing at `/blog`.
@@ -26,15 +23,20 @@ pub async fn serve_index(State(store): State<Arc<PageStore>>) -> Result<Markup, 
 /// # Returns
 ///
 /// The pre-rendered HTML listing of all published posts, sorted by date descending.
-pub async fn serve_blog_index(State(store): State<Arc<PageStore>>) -> Markup {
-    PreEscaped(store.blog_listing().to_owned())
+///
+/// # Errors
+///
+/// Returns a worker error if the response cannot be constructed.
+pub fn serve_blog_index(store: &PageStore) -> Result<Response> {
+    Response::from_html(store.blog_listing())
 }
 
-/// Serve a page at `/{*path}`.
+/// Serve a page at the given path.
 ///
 /// # Arguments
 ///
-/// * `path` - URL path segment(s), extracted by axum's wildcard router
+/// * `store` - The pre-rendered page store
+/// * `path`  - URL path segment(s) extracted from the request
 ///
 /// # Returns
 ///
@@ -42,11 +44,10 @@ pub async fn serve_blog_index(State(store): State<Arc<PageStore>>) -> Markup {
 ///
 /// # Errors
 ///
-/// Returns [`AppError::NotFound`] if no page was compiled for the path.
-pub async fn serve_page(
-    State(store): State<Arc<PageStore>>,
-    Path(path): Path<String>,
-) -> Result<Markup, AppError> {
-    let html = store.page(&path).ok_or(AppError::NotFound(path))?;
-    Ok(PreEscaped(html.to_owned()))
+/// Returns a worker error if no page was compiled for the path.
+pub fn serve_page(store: &PageStore, path: &str) -> Result<Response> {
+    let html = store
+        .page(path)
+        .ok_or_else(|| worker::Error::RustError(format!("page not found: {path}")))?;
+    Response::from_html(html)
 }
