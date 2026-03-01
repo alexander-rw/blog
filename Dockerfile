@@ -1,4 +1,4 @@
-# ---- Builder stage ----
+# ---- Builder stage (used by local builds only) ----
 FROM rust:1.85-bookworm AS builder
 
 WORKDIR /app
@@ -21,15 +21,20 @@ COPY assets/ assets/
 #    the already-built dependencies from the cached layer above.
 RUN touch src/main.rs && cargo build --release
 
-# ---- Runtime stage ----
-FROM debian:bookworm-slim
+# ---- Shared runtime base ----
+FROM debian:bookworm-slim AS base
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/target/release/blog /usr/local/bin/blog
-
 EXPOSE 3084
-
 CMD ["blog"]
+
+# ---- CI target: use pre-built binary from build context ----
+FROM base AS ci
+COPY blog /usr/local/bin/blog
+
+# ---- Local target (default): copy binary from builder stage ----
+FROM base AS local
+COPY --from=builder /app/target/release/blog /usr/local/bin/blog
