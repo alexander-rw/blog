@@ -4,6 +4,7 @@ mod handler;
 mod mdx_options;
 mod page;
 mod post;
+mod redirects;
 mod store;
 mod template;
 
@@ -12,6 +13,8 @@ use std::sync::Arc;
 use axum::{Router, routing::get};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
+use tracing::info;
+use tracing_subscriber::{EnvFilter, fmt};
 
 /// Parse MDX content into an AST, validating that frontmatter is present at the start.
 ///
@@ -57,6 +60,16 @@ pub(crate) fn parse_mdx(content: &str) -> Result<markdown::mdast::Node, String> 
 /// - `GET /{*path}` → pre-rendered page matching the given URL key
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // Initialise structured logging. Level is controlled by the RUST_LOG env var
+    // (e.g. RUST_LOG=info or RUST_LOG=blog=debug,tower_http=debug).
+    // Falls back to INFO for this crate and WARN for everything else if unset.
+    fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("blog=info,tower_http=info,warn")),
+        )
+        .init();
+
     let store =
         Arc::new(store::PageStore::build().map_err(|e| anyhow::anyhow!("startup failed: {e}"))?);
 
@@ -68,7 +81,7 @@ async fn main() -> anyhow::Result<()> {
         .layer(TraceLayer::new_for_http());
 
     let listener = TcpListener::bind("0.0.0.0:3084").await?;
-    println!("listening on {}", listener.local_addr()?);
+    info!(addr = %listener.local_addr()?, "listening");
     axum::serve(listener, app).await?;
 
     Ok(())

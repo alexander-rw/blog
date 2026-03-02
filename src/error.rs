@@ -1,8 +1,10 @@
 use axum::{
-    http::StatusCode,
+    http::{StatusCode, header},
     response::{IntoResponse, Response},
 };
 use thiserror::Error;
+
+use crate::template::render_not_found;
 
 /// Application-level errors returned by route handlers.
 #[derive(Debug, Error)]
@@ -26,13 +28,18 @@ pub enum AppError {
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        let (status, body) = match &self {
-            AppError::NotFound(path) => (StatusCode::NOT_FOUND, format!("404 Not Found: {path}")),
+        match self {
+            AppError::NotFound(_) => (
+                StatusCode::NOT_FOUND,
+                [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
+                render_not_found().into_string(),
+            )
+                .into_response(),
             AppError::ParseError(msg) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("500 Internal Server Error: {msg}"),
-            ),
-        };
-        (status, body).into_response()
+            )
+                .into_response(),
+        }
     }
 }

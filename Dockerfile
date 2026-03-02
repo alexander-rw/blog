@@ -20,7 +20,12 @@ COPY assets/ assets/
 # 3) Recompile: src/main.rs changed (stub -> real), and cargo detects pages/
 #    changed via rerun-if-changed, so the build script re-runs and regenerates
 #    generated_pages.rs with real content before the binary is compiled.
-RUN touch src/main.rs && cargo build --release
+# Touch both build.rs and src/main.rs. Touching build.rs unconditionally forces
+# Cargo to re-run the build script, sidestepping the Docker COPY timestamp
+# issue where the pages/ directory mtime can appear older than Cargo's cached
+# fingerprint (because COPY preserves host mtimes), which would otherwise fool
+# the rerun-if-changed check into skipping the build script entirely.
+RUN touch build.rs src/main.rs && cargo build --release
 
 # ---- Shared runtime base ----
 FROM debian:bookworm-slim AS base

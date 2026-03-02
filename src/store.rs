@@ -5,6 +5,7 @@ include!(concat!(env!("OUT_DIR"), "/generated_pages.rs"));
 use std::collections::HashMap;
 
 use anyhow::{Context, Result};
+use tracing::{debug, error, info};
 
 use crate::{mdx_options, page, parse_mdx, post, template};
 
@@ -56,31 +57,46 @@ impl PageStore {
 
         // --- Pass 1: parse every MDX source, collecting metadata and listings. ---
         // Rendering is deferred until the full search index is available.
-        let mut parsed: Vec<PageData> = Vec::with_capacity(EMBEDDED_MDX.len());
+        let total = EMBEDDED_MDX.len();
+        info!(total, "building page store");
+
+        let mut parsed: Vec<PageData> = Vec::with_capacity(total);
 
         for &(key, source) in EMBEDDED_MDX {
+            debug!(key, "parsing page");
+
             let ast = parse_mdx(source)
                 .map_err(|e| anyhow::anyhow!("{e}"))
                 .with_context(|| format!("parsing MDX for \"{key}\""))?;
 
             let meta = page::extract_meta(&ast, source)
-                .map_err(|e| anyhow::anyhow!("{e}"))
+                .map_err(|e| {
+                    error!(key, err = %e, "failed to extract metadata");
+                    anyhow::anyhow!("{e}")
+                })
                 .with_context(|| format!("extracting metadata for \"{key}\""))?;
 
             let html_content = markdown::to_html_with_options(source, &opts)
-                .map_err(|e| anyhow::anyhow!("{e}"))
+                .map_err(|e| {
+                    error!(key, err = %e, "failed to render HTML");
+                    anyhow::anyhow!("{e}")
+                })
                 .with_context(|| format!("rendering HTML for \"{key}\""))?;
 
             // Any page filed under blog/ is a candidate for the post listing.
             // `extract_listing` returns None for drafts so they are silently skipped.
             let listing = if let Some(slug) = key.strip_prefix("blog/") {
                 post::extract_listing(slug, &ast)
-                    .map_err(|e| anyhow::anyhow!("{e}"))
+                    .map_err(|e| {
+                        error!(key, err = %e, "failed to extract post listing");
+                        anyhow::anyhow!("{e}")
+                    })
                     .with_context(|| format!("extracting post listing for \"{key}\""))?
             } else {
                 None
             };
 
+            debug!(key, title = %meta.title, "page ready");
             parsed.push(PageData {
                 key: key.to_owned(),
                 meta,
@@ -119,6 +135,7 @@ impl PageStore {
 
         let blog_listing = template::render_post_list(&post_listings, &search_json).0;
 
+        info!(pages = pages.len(), "page store ready");
         Ok(PageStore {
             pages,
             blog_listing,

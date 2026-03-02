@@ -114,6 +114,18 @@ pub fn render_page(meta: &PageMeta, html_content: &str, search_json: &str) -> Ma
     html_shell(&meta.title, body, search_json)
 }
 
+/// Render a styled 404 page inside the shared HTML shell.
+///
+/// Returns a full page with the standard header/footer and theme toggle,
+/// displaying a simple "Page does not exist" message.
+pub fn render_not_found() -> Markup {
+    html_shell(
+        "404 – Not Found",
+        html! { h1 class="page-title" { "Page does not exist" } },
+        "[]",
+    )
+}
+
 /// Render a `<ul>` listing of blog posts inside the shared HTML shell.
 ///
 /// Each item shows the post title (linked to `/blog/{slug}`), optional date,

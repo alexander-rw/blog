@@ -1,9 +1,12 @@
 use std::sync::Arc;
 
-use axum::extract::{Path, State};
+use axum::{
+    extract::{Path, State},
+    response::{IntoResponse, Redirect, Response},
+};
 use maud::{Markup, PreEscaped};
 
-use crate::{error::AppError, store::PageStore};
+use crate::{error::AppError, redirects, store::PageStore};
 
 /// Serve the index page at `/`.
 ///
@@ -30,23 +33,30 @@ pub async fn serve_blog_index(State(store): State<Arc<PageStore>>) -> Markup {
     PreEscaped(store.blog_listing().to_owned())
 }
 
-/// Serve a page at `/{*path}`.
+/// Serve a page or permanent redirect at `/{*path}`.
+///
+/// Resolution order:
+/// 1. Pre-rendered page in the store → `200 OK` with HTML.
+/// 2. Entry in the static redirect table → `308 Permanent Redirect`.
+/// 3. Neither → styled `404` page via [`AppError::NotFound`].
 ///
 /// # Arguments
 ///
 /// * `path` - URL path segment(s), extracted by axum's wildcard router
 ///
-/// # Returns
-///
-/// The pre-rendered HTML page for the given path.
-///
 /// # Errors
 ///
-/// Returns [`AppError::NotFound`] if no page was compiled for the path.
+/// Returns [`AppError::NotFound`] if the path matches neither a compiled page
+/// nor a configured redirect.
 pub async fn serve_page(
     State(store): State<Arc<PageStore>>,
     Path(path): Path<String>,
-) -> Result<Markup, AppError> {
-    let html = store.page(&path).ok_or(AppError::NotFound(path))?;
-    Ok(PreEscaped(html.to_owned()))
+) -> Result<Response, AppError> {
+    if let Some(html) = store.page(&path) {
+        return Ok(PreEscaped(html.to_owned()).into_response());
+    }
+    if let Some(target) = redirects::lookup(&path) {
+        return Ok(Redirect::permanent(target).into_response());
+    }
+    Err(AppError::NotFound(path))
 }
