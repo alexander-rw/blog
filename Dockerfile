@@ -3,22 +3,23 @@ FROM rust:1.85-bookworm AS builder
 
 WORKDIR /app
 
-# 1) Copy only dependency manifests and create stubs so that `cargo build`
-#    downloads and compiles all dependencies in a cacheable layer.
-COPY Cargo.toml Cargo.lock ./
-RUN mkdir src && echo "fn main() {}" > src/main.rs && echo "fn main() {}" > build.rs
+# 1) Copy manifests + real build.rs. Stub only the Rust source with an empty
+#    pages/ dir. The real build.rs handles empty pages/ gracefully (collect_mdx
+#    returns early), so it writes a valid-but-empty generated_pages.rs to
+#    OUT_DIR. This lets all dependencies compile and be cached in this layer.
+COPY Cargo.toml Cargo.lock build.rs ./
+RUN mkdir -p src pages && echo "fn main() {}" > src/main.rs
 RUN cargo build --release
-RUN rm -rf src build.rs
+RUN rm -rf src
 
-# 2) Copy the real source tree (build.rs needs pages/ and assets/ at compile
-#    time because it embeds them via include_str!).
-COPY build.rs build.rs
+# 2) Copy the real source tree and content files.
 COPY src/ src/
 COPY pages/ pages/
 COPY assets/ assets/
 
-# 3) Touch main.rs so cargo detects the source change and recompiles, reusing
-#    the already-built dependencies from the cached layer above.
+# 3) Recompile: src/main.rs changed (stub -> real), and cargo detects pages/
+#    changed via rerun-if-changed, so the build script re-runs and regenerates
+#    generated_pages.rs with real content before the binary is compiled.
 RUN touch src/main.rs && cargo build --release
 
 # ---- Shared runtime base ----
