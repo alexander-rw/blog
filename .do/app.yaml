@@ -1,0 +1,8 @@
+name: alexander-rw-blog
+services:
+- environment_slug: rust
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: alexander-rw/blog
+  name: alexander-rw-blog
