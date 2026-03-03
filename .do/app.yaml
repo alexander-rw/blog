@@ -1,8 +1,31 @@
-name: blog
+
+name: alexander-rw-blog
+region: lon
+alerts:
+- rule: DEPLOYMENT_FAILED
+- rule: DOMAIN_FAILED
+domains:
+- domain: alexander-rw.com
+  type: PRIMARY
+features:
+- buildpack-stack=ubuntu-22
+ingress:
+  rules:
+  - component:
+      name: blog
+    match:
+      authority:
+        exact: ""
+      path:
+        prefix: /
 services:
-- name: blog
-  environment_slug: rust
+- environment_slug: rust
   github:
     branch: main
-    deploy_on_push: false
+    deploy_on_push: true
     repo: alexander-rw/blog
+  http_port: 3084
+  instance_count: 1
+  instance_size_slug: apps-s-1vcpu-0.5gb
+  name: blog
+  source_dir: /

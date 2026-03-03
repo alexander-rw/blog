@@ -15,6 +15,5 @@ jobs:
       - uses: digitalocean/app_action/deploy@v2
         with:
           token: ${{ secrets.DIGITALOCEAN_GITHUB_BLOG_TOKEN }}
-          # app_name: shark-app
           print_build_logs: true
           print_deploy_logs: true
