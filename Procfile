@@ -1,1 +1,1 @@
-web: alexander-rw-blog
+web: blog

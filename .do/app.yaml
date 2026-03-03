@@ -1,6 +1,6 @@
-name: alexander-rw-blog
+name: blog
 services:
-- name: alexander-rw-blog
+- name: blog
   environment_slug: rust
   github:
     branch: main
