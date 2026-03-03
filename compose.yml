@@ -1,8 +1,0 @@
-services:
-  blog:
-    build: .
-    ports:
-      - "3084:3084"
-    restart: unless-stopped
-    environment:
-      - RUST_LOG=blog=debug,tower_http=debug,warn

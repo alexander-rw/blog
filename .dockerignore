@@ -1,7 +1,0 @@
-target/
-.git/
-.github/
-.vscode/
-.claude/
-Dockerfile
-.dockerignore
