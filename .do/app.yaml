@@ -3,6 +3,6 @@ services:
 - environment_slug: rust
   github:
     branch: main
-    deploy_on_push: true
+    deploy_on_push: false
     repo: alexander-rw/blog
   name: alexander-rw-blog
