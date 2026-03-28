@@ -16,12 +16,7 @@ All markdown files are installed within the binary. I wanted to do this for two 
 
 ### Why rust?
 
-I wanted to learn rust. I also maintain [https://github.com/alexander-rw/logs-of-war](https://github.com/alexander-rw/logs-of-war) for the same reason. 
-
-### Why rust for the blog
-
-Wanted to see what i could get out of performance and devex with a mature language, rust seemed like a sensible choice.
-Most pages are served in ~4ms locally, which is blazing fast and hit my expectations. Doesn't translate over once network hops are involved sadly.
+I wanted to learn rust. I also maintain [https://github.com/alexander-rw/logs-of-war](https://github.com/alexander-rw/logs-of-war) for the same reason.
 
 ## License
 
