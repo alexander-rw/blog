@@ -29,6 +29,10 @@ services:
   - key: BP_RUST_TOOLCHAIN
     scope: BUILD_TIME
     value: "1.98.1"
+    envs:
+  - key: BP_RUSTUP_INIT_VERSION
+    scope: BUILD_TIME
+    value: "1.29.1"
   github:
     branch: main
     deploy_on_push: true
