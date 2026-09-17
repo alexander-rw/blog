@@ -57,6 +57,7 @@ pub(crate) fn parse_mdx(content: &str) -> Result<markdown::mdast::Node, String> 
 /// Routes:
 /// - `GET /`        → pre-rendered `pages/index.mdx`
 /// - `GET /blog`    → pre-rendered listing of all published blog posts
+/// - `GET /search.json` → JSON search index, fetched lazily by the search dialog
 /// - `GET /{*path}` → pre-rendered page matching the given URL key
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -76,6 +77,7 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/", get(handler::serve_index))
         .route("/blog", get(handler::serve_blog_index))
+        .route("/search.json", get(handler::serve_search_index))
         .route("/{*path}", get(handler::serve_page))
         .with_state(store)
         .layer(TraceLayer::new_for_http());

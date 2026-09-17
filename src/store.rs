@@ -5,6 +5,7 @@ include!(concat!(env!("OUT_DIR"), "/generated_pages.rs"));
 use std::collections::HashMap;
 
 use anyhow::{Context, Result};
+use axum::body::Bytes;
 use tracing::{debug, error, info};
 
 use crate::{mdx_options, page, parse_mdx, post, template};
@@ -19,6 +20,11 @@ pub struct PageStore {
     pages: HashMap<String, String>,
     /// Pre-rendered blog post listing page.
     blog_listing: String,
+    /// Serialised JSON search index served at `/search.json`.
+    ///
+    /// `Bytes` is a reference-counted buffer, so cloning it per request is a
+    /// pointer copy rather than a copy of the whole index.
+    search_index: Bytes,
 }
 
 /// Intermediate data produced during the first parse pass, before rendering.
@@ -36,11 +42,7 @@ impl PageStore {
     ///
     /// Uses a two-pass strategy:
     /// 1. Parse all MDX files, extract metadata and post listings (with body text).
-    /// 2. Serialise the search index, then render every page with the index inline.
-    ///
-    /// This ordering is required because each rendered page embeds the *complete*
-    /// search index covering all posts — so the index must be finalised before any
-    /// page is rendered.
+    /// 2. Sort the post listings, serialise the search index, and render every page.
     ///
     /// Called once at server startup. Any validation or render failure returns
     /// `Err`, preventing the server from starting with broken content.
@@ -56,7 +58,6 @@ impl PageStore {
         let opts = mdx_options::default_mdx_compile_options();
 
         // --- Pass 1: parse every MDX source, collecting metadata and listings. ---
-        // Rendering is deferred until the full search index is available.
         let total = EMBEDDED_MDX.len();
         info!(total, "building page store");
 
@@ -118,27 +119,26 @@ impl PageStore {
             (None, None) => std::cmp::Ordering::Equal,
         });
 
-        // Serialise to JSON; escape `</` as `<\/` (valid JSON, prevents accidental
-        // `</script>` tag closure when the JSON is inlined in an HTML <script> block).
-        let search_json = serde_json::to_string(&post_listings)
-            .context("serialising search index")?
-            .replace("</", "<\\/");
+        // Served as a separate, lazily fetched file so pages don't carry the index.
+        let search_index =
+            Bytes::from(serde_json::to_vec(&post_listings).context("serialising search index")?);
 
-        // --- Pass 2: render every page with the complete search index inline. ---
+        // --- Pass 2: render every page. ---
         let mut pages = HashMap::with_capacity(parsed.len());
         for p in &parsed {
             pages.insert(
                 p.key.clone(),
-                template::render_page(&p.meta, &p.html_content, &search_json).0,
+                template::render_page(&p.meta, &p.html_content).0,
             );
         }
 
-        let blog_listing = template::render_post_list(&post_listings, &search_json).0;
+        let blog_listing = template::render_post_list(&post_listings).0;
 
         info!(pages = pages.len(), "page store ready");
         Ok(PageStore {
             pages,
             blog_listing,
+            search_index,
         })
     }
 
@@ -152,5 +152,36 @@ impl PageStore {
     /// Return the pre-rendered blog post listing page.
     pub fn blog_listing(&self) -> &str {
         &self.blog_listing
+    }
+
+    /// Return the serialised JSON search index covering all published posts.
+    pub fn search_index(&self) -> &Bytes {
+        &self.search_index
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn search_index_is_json_array_without_drafts() {
+        let store = PageStore::build().expect("embedded pages should build");
+
+        let index: Vec<serde_json::Value> =
+            serde_json::from_slice(store.search_index()).expect("index should be a JSON array");
+
+        assert!(!index.is_empty());
+        assert!(index.iter().all(|post| post["slug"] != "draft"));
+    }
+
+    #[test]
+    fn pages_do_not_inline_search_index() {
+        let store = PageStore::build().expect("embedded pages should build");
+
+        let index_page = store.page("index").expect("index page should exist");
+
+        assert!(!index_page.contains("__SEARCH__"));
+        assert!(!store.blog_listing().contains("__SEARCH__"));
     }
 }

@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use axum::{
+    body::Bytes,
     extract::{Path, State},
+    http::header,
     response::{IntoResponse, Redirect, Response},
 };
 use maud::{Markup, PreEscaped};
@@ -31,6 +33,24 @@ pub async fn serve_index(State(store): State<Arc<PageStore>>) -> Result<Markup, 
 /// The pre-rendered HTML listing of all published posts, sorted by date descending.
 pub async fn serve_blog_index(State(store): State<Arc<PageStore>>) -> Markup {
     PreEscaped(store.blog_listing().to_owned())
+}
+
+/// Serve the JSON search index at `/search.json`.
+///
+/// Fetched by `search.js` the first time the search dialog opens, so normal
+/// page loads never download it.
+///
+/// # Returns
+///
+/// The serialised array of published post listings with a JSON content type.
+pub async fn serve_search_index(
+    State(store): State<Arc<PageStore>>,
+) -> ([(header::HeaderName, &'static str); 1], Bytes) {
+    // `Bytes::clone` bumps a reference count; the index itself is not copied.
+    (
+        [(header::CONTENT_TYPE, "application/json")],
+        store.search_index().clone(),
+    )
 }
 
 /// Serve a page or permanent redirect at `/{*path}`.

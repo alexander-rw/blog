@@ -4,9 +4,20 @@
     var closeBtn = document.getElementById('search-close');
     var inp = document.getElementById('search-input');
     var res = document.getElementById('search-results');
-    var idx = window.__SEARCH__ || [];
+    var idx = [];
+    var idxRequest = null;
+
+    // Fetch the index once, on first use, then re-run any query typed while it loaded.
+    function loadIndex() {
+        if (idxRequest) { return; }
+        idxRequest = fetch('/search.json')
+            .then(function (r) { return r.json(); })
+            .then(function (data) { idx = data; renderResults(); })
+            .catch(function () { idxRequest = null; });
+    }
 
     function openDialog() {
+        loadIndex();
         d.showModal();
         inp.value = '';
         res.innerHTML = '';
@@ -28,9 +39,9 @@
         }
     });
 
-    inp.addEventListener('input', function () {
+    function renderResults() {
         var q = inp.value.toLowerCase().trim();
-        if (!q) { res.innerHTML = ''; return; }
+        if (!q || !idx.length) { res.innerHTML = ''; return; }
         var hits = idx.filter(function (p) {
             return (p.title + ' ' + (p.description || '') + ' ' + p.body)
                 .toLowerCase()
@@ -49,5 +60,7 @@
                     : '')
                 + '</a></li>';
         }).join('');
-    });
+    }
+
+    inp.addEventListener('input', renderResults);
 }());

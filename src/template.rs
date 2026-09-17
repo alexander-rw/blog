@@ -10,12 +10,9 @@ use crate::{constants, page::PageMeta, post::PostListing};
 ///
 /// # Arguments
 ///
-/// * `page_title`  - Text for the browser-tab `<title>` element (auto-escaped by Maud)
-/// * `body`        - Pre-built Maud `Markup` fragment placed inside `<main>`
-/// * `search_json` - Pre-serialised JSON array for `window.__SEARCH__`, injected inline.
-///   `</` sequences must already be escaped to `<\/` by the caller to prevent premature
-///   `</script>` tag closure.
-fn html_shell(page_title: &str, body: Markup, search_json: &str) -> Markup {
+/// * `page_title` - Text for the browser-tab `<title>` element (auto-escaped by Maud)
+/// * `body`       - Pre-built Maud `Markup` fragment placed inside `<main>`
+fn html_shell(page_title: &str, body: Markup) -> Markup {
     html! {
         (DOCTYPE)
         html lang="en" data-theme="light" {
@@ -36,10 +33,6 @@ fn html_shell(page_title: &str, body: Markup, search_json: &str) -> Markup {
                 // `PreEscaped` passes the CSS constant through verbatim —
                 // it contains raw `{`, `}`, `<`, `>` that must not be entity-encoded.
                 style { (PreEscaped(constants::STYLES)) }
-                // Inline the search index so the client needs zero extra HTTP requests.
-                // `search_json` has `</` escaped as `<\/` (valid JSON) to prevent a
-                // stray `</script>` in any post content from closing this tag early.
-                script { (PreEscaped(format!("window.__SEARCH__={search_json}"))) }
             }
             body {
                 header {
@@ -102,8 +95,7 @@ fn html_shell(page_title: &str, body: Markup, search_json: &str) -> Markup {
 ///
 /// * `meta`         - Frontmatter-derived title and reading-time estimate
 /// * `html_content` - MDX-rendered HTML fragment (not escaped — already valid HTML)
-/// * `search_json`  - Pre-serialised JSON search index (with `</` escaped as `<\/`)
-pub fn render_page(meta: &PageMeta, html_content: &str, search_json: &str) -> Markup {
+pub fn render_page(meta: &PageMeta, html_content: &str) -> Markup {
     let body = html! {
         h1 class="page-title" { (meta.title) }
         p class="read-time" { (meta.read_time_mins) " min read" }
@@ -111,7 +103,7 @@ pub fn render_page(meta: &PageMeta, html_content: &str, search_json: &str) -> Ma
         // so bypass Maud's auto-escaping with `PreEscaped`.
         div class="content" { (PreEscaped(html_content)) }
     };
-    html_shell(&meta.title, body, search_json)
+    html_shell(&meta.title, body)
 }
 
 /// Render a styled 404 page inside the shared HTML shell.
@@ -122,7 +114,6 @@ pub fn render_not_found() -> Markup {
     html_shell(
         "404 – Not Found",
         html! { h1 class="page-title" { "Page does not exist" } },
-        "[]",
     )
 }
 
@@ -133,9 +124,8 @@ pub fn render_not_found() -> Markup {
 ///
 /// # Arguments
 ///
-/// * `posts`       - Slice of post summaries, typically pre-sorted by date descending
-/// * `search_json` - Pre-serialised JSON search index (with `</` escaped as `<\/`)
-pub fn render_post_list(posts: &[PostListing], search_json: &str) -> Markup {
+/// * `posts` - Slice of post summaries, typically pre-sorted by date descending
+pub fn render_post_list(posts: &[PostListing]) -> Markup {
     let body = html! {
         h1 class="page-title" { "Posts" }
         ul class="post-list" {
@@ -156,5 +146,5 @@ pub fn render_post_list(posts: &[PostListing], search_json: &str) -> Markup {
             }
         }
     };
-    html_shell("Posts", body, search_json)
+    html_shell("Posts", body)
 }
