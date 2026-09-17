@@ -5,7 +5,7 @@ domains:
 - domain: alexander-rw.com
   type: PRIMARY
 features:
-- buildpack-stack=ubuntu-22
+- buildpack-stack=ubuntu-24
 ingress:
   rules:
   - component:
