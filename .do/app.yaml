@@ -26,13 +26,12 @@ region: lon
 services:
 - environment_slug: rust
   envs:
-  - key: BP_RUST_TOOLCHAIN
+  - key: BP_RUSTUP_ENABLED
     scope: BUILD_TIME
-    value: "1.98.1"
-    envs:
-  - key: BP_RUSTUP_INIT_VERSION
+    value: "false"
+  - key: BP_RUST_VERSION
     scope: BUILD_TIME
-    value: "1.29.1"
+    value: "1.94.0"
   github:
     branch: main
     deploy_on_push: true
