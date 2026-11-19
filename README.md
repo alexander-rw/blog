@@ -12,19 +12,15 @@ You'll need `cargo` installed. `rust-toolchain.toml` pins the Rust version, and 
 
 ## Deployment
 
-Cloudflare Workers Builds is connected to this repo and deploys every push to `main`:
-
-1. The build command (set in the Cloudflare dashboard) installs Rust with rustup and runs `cargo run -- export`.
-2. The deploy command, `npx wrangler deploy`, uploads `dist/` as a static-assets-only Worker using `wrangler.jsonc`.
+GitHub Actions (`.github/workflows/deploy.yml`) runs on every push and pull request. It checks fmt, clippy and the tests, then runs `cargo run -- export`. On a push to `main` it also runs `wrangler deploy` through `cloudflare/wrangler-action`, which uploads `dist/` as a static-assets-only Worker using `wrangler.jsonc`.
 
 Notes:
 
-- Settings in the Workers Builds dashboard override the repo. If a build runs an unexpected command, check the dashboard first.
-- The Worker's `name` in `wrangler.jsonc` must match the Worker name in the dashboard (`blog`).
+- The workflow needs two repo secrets: `CLOUDFLARE_API_TOKEN` (made from the "Edit Cloudflare Workers" token template) and `CLOUDFLARE_ACCOUNT_ID`.
 - `wrangler.jsonc` attaches the `alexander-rw.com` custom domain, and Cloudflare manages its DNS record. `www` redirects to the apex through a rule in the Cloudflare dashboard, which isn't part of this repo.
 - Redirects are defined once in `src/redirects.rs`, and the export turns them into `dist/_redirects`.
 - Pages marked `draft: true` are left out of the post listing and search, but are still served at their URL.
-- GitHub Actions (`.github/workflows/ci.yml`) runs fmt, clippy, tests and the export on every push and pull request. It doesn't deploy.
+- To deploy by hand, run `npx wrangler login`, then `cargo run -- export && npx wrangler deploy`.
 
 ## Engineering decisions
 
