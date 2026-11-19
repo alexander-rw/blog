@@ -9,3 +9,4 @@ _pagefind/
 /target
 /dist
 .wrangler/
+.do/
