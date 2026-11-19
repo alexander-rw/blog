@@ -1,6 +1,6 @@
 // Static-assets-only Worker: `cargo run -- export` writes the site to dist/.
 {
-    "name": "alexander-rw-blog",
+    "name": "blog",
     "compatibility_date": "2026-11-01",
     "workers_dev": false,
     "routes": [{ "pattern": "alexander-rw.com", "custom_domain": true }],
