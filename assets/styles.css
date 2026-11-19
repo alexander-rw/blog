@@ -3,7 +3,8 @@
   --bg: #fefce8;
   --text: #1C1B33;
   --accent: #6D28D9;
-  --muted: #6B7280;
+  /* >= 4.5:1 (WCAG AA) on --bg and on the kbd tint below. */
+  --muted: #5B6170;
   --max-width: 720px;
   --separator: #F7F4EC;
 }
@@ -11,6 +12,7 @@
   --bg: #0F0E1A;
   --text: #E4E2F0;
   --accent: #A78BFA;
+  --muted: #9CA3AF;
 }
 *, *::before, *::after { box-sizing: border-box; }
 html {
@@ -145,6 +147,8 @@ footer svg { width: 1.375rem; height: 1.375rem; }
 .search-btn kbd {
   font-family: monospace;
   font-size: 0.72rem;
+  /* Override Pico's kbd colours so the text follows the button (--muted). */
+  color: inherit;
   background: color-mix(in srgb, var(--text) 8%, transparent);
   border-radius: 3px;
   padding: 0.1rem 0.3rem;
