@@ -1,5 +1,6 @@
 mod constants;
 mod error;
+mod export;
 mod handler;
 mod mdx_options;
 mod page;
@@ -8,7 +9,7 @@ mod redirects;
 mod store;
 mod template;
 
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 use axum::{Router, routing::get};
 use tokio::net::TcpListener;
@@ -48,19 +49,19 @@ pub(crate) fn parse_mdx(content: &str) -> Result<markdown::mdast::Node, String> 
     Ok(ast)
 }
 
-/// Start the axum HTTP server on `0.0.0.0:3084`.
+/// Build every page, then either export the static site or start the local server.
 ///
-/// All MDX pages are parsed and rendered at startup; the server refuses to start
-/// if any page fails validation. Subsequent requests are served entirely from
-/// the in-memory store — no file I/O occurs at request time.
+/// - `cargo run`          → serve on `0.0.0.0:3084` for local development.
+/// - `cargo run -- export` → write the static site to `dist/` for Cloudflare.
 ///
-/// Routes:
-/// - `GET /`        → pre-rendered `pages/index.mdx`
-/// - `GET /blog`    → pre-rendered listing of all published blog posts
-/// - `GET /search.json` → JSON search index, fetched lazily by the search dialog
-/// - `GET /{*path}` → pre-rendered page matching the given URL key
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+/// Both modes share one [`store::PageStore`], so the export matches what the
+/// server returns. The program refuses to run if any page fails validation.
+///
+/// # Errors
+///
+/// Returns an error if a page fails to build, the argument is unknown, the
+/// export cannot be written, or the server fails to bind or serve.
+fn main() -> anyhow::Result<()> {
     // Initialise structured logging. Level is controlled by the RUST_LOG env var
     // (e.g. RUST_LOG=info or RUST_LOG=blog=debug,tower_http=debug).
     // Falls back to INFO for this crate and WARN for everything else if unset.
@@ -71,15 +72,52 @@ async fn main() -> anyhow::Result<()> {
         )
         .init();
 
-    let store =
-        Arc::new(store::PageStore::build().map_err(|e| anyhow::anyhow!("startup failed: {e}"))?);
+    let store = store::PageStore::build().map_err(|e| anyhow::anyhow!("startup failed: {e}"))?;
 
+    // `nth(1)` skips the program name, like `sys.argv[1]` in Python.
+    match std::env::args().nth(1).as_deref() {
+        None => serve(store),
+        Some("export") => {
+            let files = export::site_files(&store);
+            export::write_site(Path::new(export::EXPORT_DIR), &files)?;
+            info!(
+                files = files.len(),
+                dir = export::EXPORT_DIR,
+                "exported static site"
+            );
+            Ok(())
+        }
+        Some(other) => anyhow::bail!("unknown command {other:?}; expected none or `export`"),
+    }
+}
+
+/// Serve the pre-rendered site with axum on `0.0.0.0:3084`.
+///
+/// Requests are served entirely from the in-memory store; no file I/O occurs
+/// at request time. `#[tokio::main]` builds the async runtime only for this
+/// mode, so `export` never starts one.
+///
+/// Routes:
+/// - `GET /`        → pre-rendered `pages/index.mdx`
+/// - `GET /blog`    → pre-rendered listing of all published blog posts
+/// - `GET /search.json` → JSON search index, fetched lazily by the search dialog
+/// - `GET /{*path}` → pre-rendered page matching the given URL key
+///
+/// # Arguments
+///
+/// * `store` - The fully built page store
+///
+/// # Errors
+///
+/// Returns an error if the listener cannot bind or the server fails.
+#[tokio::main]
+async fn serve(store: store::PageStore) -> anyhow::Result<()> {
     let app = Router::new()
         .route("/", get(handler::serve_index))
         .route("/blog", get(handler::serve_blog_index))
         .route("/search.json", get(handler::serve_search_index))
         .route("/{*path}", get(handler::serve_page))
-        .with_state(store)
+        .with_state(Arc::new(store))
         .layer(TraceLayer::new_for_http());
 
     let listener = TcpListener::bind("0.0.0.0:3084").await?;

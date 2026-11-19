@@ -22,6 +22,21 @@ pub fn lookup(slug: &str) -> Option<&'static str> {
         .find_map(|&(from, to)| (from == slug).then_some(to))
 }
 
+/// Render [`REDIRECTS`] as a Cloudflare `_redirects` file.
+///
+/// Each line is `/<from> <to> 308`, matching the permanent redirect the local
+/// server returns, so this table stays the single source of truth.
+///
+/// # Returns
+///
+/// The file contents, one rule per line.
+pub fn cloudflare_redirects_file() -> String {
+    REDIRECTS
+        .iter()
+        .map(|(from, to)| format!("/{from} {to} 308\n"))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -29,6 +44,14 @@ mod tests {
     #[test]
     fn known_slug_resolves() {
         assert_eq!(lookup("other-writers"), Some("/blog/blog-of-blogs"));
+    }
+
+    #[test]
+    fn cloudflare_file_lists_every_redirect_as_308() {
+        let file = cloudflare_redirects_file();
+
+        assert_eq!(file.lines().count(), REDIRECTS.len());
+        assert!(file.contains("/other-writers /blog/blog-of-blogs 308\n"));
     }
 
     #[test]

@@ -1,0 +1,14 @@
+// Static-assets-only Worker: `cargo run -- export` writes the site to dist/.
+{
+    "name": "alexander-rw-blog",
+    "compatibility_date": "2026-11-01",
+    "workers_dev": false,
+    "routes": [{ "pattern": "alexander-rw.com", "custom_domain": true }],
+    "assets": {
+        "directory": "./dist",
+        // `/blog/x` serves blog/x.html; `/blog/x/` redirects to `/blog/x`.
+        "html_handling": "drop-trailing-slash",
+        // Unknown paths get dist/404.html with a 404 status.
+        "not_found_handling": "404-page"
+    }
+}

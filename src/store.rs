@@ -149,6 +149,15 @@ impl PageStore {
         self.pages.get(key).map(String::as_str)
     }
 
+    /// Iterate over every pre-rendered page as `(url_key, html)` pairs.
+    ///
+    /// Order is unspecified (it follows the underlying `HashMap`).
+    pub fn pages(&self) -> impl ExactSizeIterator<Item = (&str, &str)> {
+        self.pages
+            .iter()
+            .map(|(key, html)| (key.as_str(), html.as_str()))
+    }
+
     /// Return the pre-rendered blog post listing page.
     pub fn blog_listing(&self) -> &str {
         &self.blog_listing
